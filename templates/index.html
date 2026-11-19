@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EVE-NG Router Diagnostics</title>
+    <style>
+        :root {
+            --bg-outer: #695467;
+            --bg-dark: #141216;
+            --card-dark: #1d1a21;
+            --card-elevated: #28232e;
+            --plum-grad: linear-gradient(135deg, #5e3f5c 0%, #986d94 55%, #b98fb5 100%);
+            --lime: #d2f865;
+            --text-light: #ffffff;
+            --text-muted: #a69ba5;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --err: #ff6b81;
+            --err-bg: rgba(255, 107, 129, 0.14);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at top left, #7b6379 0%, #4d3c4c 100%);
+            color: var(--text-light);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            padding: 28px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /* Main App Shell */
+        .app-frame {
+            width: 100%;
+            max-width: 1240px;
+            background: var(--bg-dark);
+            border-radius: 36px;
+            padding: 28px 32px 36px;
+            box-shadow: 0 30px 70px rgba(15, 10, 18, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Top Header Bar */
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .avatar-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--plum-grad);
+            display: grid;
+            place-items: center;
+            font-weight: 800;
+            font-size: 0.9rem;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: var(--card-dark);
+            padding: 5px;
+            border-radius: 999px;
+            border: 1px solid var(--border-subtle);
+            gap: 4px;
+        }
+
+        .nav-tab {
+            padding: 7px 18px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .nav-tab.active {
+            background: rgba(255, 255, 255, 0.14);
+            color: #ffffff;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #ffffff;
+            color: #141216;
+            padding: 7px 16px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .status-pill.fail {
+            background: var(--err);
+            color: #ffffff;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+        }
+
+        .status-pill.fail .status-dot {
+            background: #ffffff;
+        }
+
+        /* Dashboard Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 26px;
+            align-items: start;
+        }
+
+        /* Hero Mauve Card (Like "AI for Creators" card) */
+        .hero-card {
+            background: var(--plum-grad);
+            border-radius: 28px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 18px 40px rgba(94, 63, 92, 0.45);
+            margin-bottom: 20px;
+        }
+
+        .hero-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 26px;
+        }
+
+        .chip-row {
+            display: flex;
+            align-items: center;
+        }
+
+        .mini-badge {
+            background: #141216;
+            color: #ffffff;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 5px 11px;
+            border-radius: 999px;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+        }
+
+        .active-pill {
+            background: #ffffff;
+            color: #141216;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 5px 13px;
+            border-radius: 999px;
+        }
+
+        .hero-card h1 {
+            margin: 0 0 8px;
+            font-size: 1.65rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.15;
+        }
+
+        .hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 22px;
+        }
+
+        .hero-meta span {
+            background: rgba(20, 18, 22, 0.28);
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        }
+
+        .run-btn {
+            width: 100%;
+            border: none;
+            border-radius: 999px;
+            padding: 14px 20px;
+            background: #141216;
+            color: #ffffff;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.15s ease, background 0.2s ease;
+        }
+
+        .run-btn:hover {
+            background: #231f27;
+            transform: translateY(-1px);
+        }
+
+        .run-btn:disabled {
+            opacity: 0.65;
+            cursor: wait;
+        }
+
+        /* Command List Card (Like "Lessons" list) */
+        .dark-card {
+            background: var(--card-dark);
+            border-radius: 26px;
+            padding: 20px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            padding: 0 4px;
+        }
+
+        .card-header h2 {
+            margin: 0;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .count-num {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .cmd-item {
+            background: var(--card-elevated);
+            border-radius: 18px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .cmd-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .cmd-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .cmd-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #ffffff;
+            color: #141216;
+            display: grid;
+            place-items: center;
+            font-weight: 800;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .cmd-name {
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cmd-sub {
+            font-size: 0.74rem;
+            color: var(--text-muted);
+        }
+
+        .pill-tag {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            padding: 5px 10px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        /* Right Side: Schedule/Telemetry Strip + Output Cards */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .telemetry-strip {
+            background: var(--card-dark);
+            border-radius: 26px;
+            padding: 20px 24px;
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .telemetry-title {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .telemetry-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        /* Lime Ring Indicator (Like "3/6" ring in reference) */
+        .ring-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .lime-ring {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: 4px solid var(--lime);
+            display: grid;
+            place-items: center;
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #ffffff;
+            background: rgba(210, 248, 101, 0.08);
+        }
+
+        .filter-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 4px;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 16px;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .filter-tabs span {
+            color: var(--text-muted);
+        }
+
+        .filter-tabs span.active {
+            color: #ffffff;
+        }
+
+        .filter-tabs sup {
+            font-size: 0.68rem;
+            color: var(--lime);
+            margin-left: 2px;
+        }
+
+        .action-links {
+            display: flex;
+            gap: 8px;
+        }
+
+        .ghost-btn {
+            background: var(--card-dark);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-muted);
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .ghost-btn:hover {
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Error Card */
+        .error-card {
+            background: var(--err-bg);
+            border: 1px solid var(--err);
+            border-radius: 22px;
+            padding: 18px 22px;
+            color: #ffd6dc;
+        }
+
+        .error-card strong {
+            display: block;
+            color: var(--err);
+            margin-bottom: 4px;
+        }
+
+        .error-card small {
+            display: block;
+            opacity: 0.9;
+            margin-top: 3px;
+        }
+
+        /* Output Result Cards (Like Schedule Cards) */
+        details.result-card {
+            background: var(--card-dark);
+            border-radius: 24px;
+            border: 1px solid var(--border-subtle);
+            overflow: hidden;
+            transition: transform 0.15s ease;
+        }
+
+        details.result-card summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        details.result-card summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .res-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .res-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ffffff;
+            color: #141216;
+            display: grid;
+            place-items: center;
+            font-weight: 800;
+            font-size: 0.85rem;
+        }
+
+        .res-title {
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .res-sub {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+        }
+
+        .res-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .done-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--lime);
+        }
+
+        .copy-pill {
+            background: var(--card-elevated);
+            border: 1px solid var(--border-subtle);
+            color: #ffffff;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .copy-pill:hover {
+            background: #ffffff;
+            color: #141216;
+        }
+
+        pre {
+            margin: 0;
+            padding: 18px 22px;
+            background: #0d0b10;
+            color: #ece6ec;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size: 13px;
+            line-height: 1.55;
+            overflow-x: auto;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        /* Empty State */
+        .empty-state {
+            background: var(--card-dark);
+            border-radius: 26px;
+            padding: 74px 24px;
+            text-align: center;
+            border: 1px dashed rgba(255, 255, 255, 0.14);
+        }
+
+        .empty-state h3 {
+            margin: 0 0 6px;
+            font-size: 1.1rem;
+        }
+
+        .empty-state p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+        }
+
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            .app-frame {
+                padding: 20px;
+                border-radius: 26px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    {% set dev = device if device is defined else {'ip': '192.168.10.47', 'port': '32770', 'protocol': 'Telnet'} %}
+    {% set cmd_list = commands if commands is defined else ['show version', 'show ip interface brief', 'show running-config'] %}
+
+    <div class="app-frame">
+        <!-- Top Header -->
+        <header class="top-nav">
+            <div class="nav-left">
+                <div class="avatar-circle">IOS</div>
+                <div class="nav-tabs">
+                    <span class="nav-tab active">Diagnostics</span>
+                    <span class="nav-tab">EVE-NG Lab</span>
+                </div>
+            </div>
+
+            {% if error is defined and error %}
+                <div class="status-pill fail"><span class="status-dot"></span> Offline</div>
+            {% elif results is defined and results %}
+                <div class="status-pill"><span class="status-dot"></span> {{ results|length }} Completed</div>
+            {% else %}
+                <div class="status-pill"><span class="status-dot"></span> Active</div>
+            {% endif %}
+        </header>
+
+        <div class="main-grid">
+            <!-- Left Column -->
+            <div>
+                <!-- Plum/Mauve Gradient Hero Card -->
+                <div class="hero-card">
+                    <div class="hero-top">
+                        <div class="chip-row">
+                            <span class="mini-badge">CISCO IOS</span>
+                        </div>
+                        <span class="active-pill">Active</span>
+                    </div>
+
+                    <h1>Router Diagnostics</h1>
+                    <div class="hero-meta">
+                        <span>{{ dev.ip }}</span>
+                        <span>Port {{ dev.port }}</span>
+                        <span>{{ dev.protocol }}</span>
+                    </div>
+
+                    <form method="POST" id="run-form">
+                        <button type="submit" id="run-btn" class="run-btn">
+                            <span id="btn-text">Run Diagnostics</span>
+                            <span>&rsaquo;</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Command Queue Card -->
+                <div class="dark-card">
+                    <div class="card-header">
+                        <h2>Commands</h2>
+                        <span class="count-num">{{ cmd_list|length }}</span>
+                    </div>
+
+                    {% for c in cmd_list %}
+                        <div class="cmd-item">
+                            <div class="cmd-left">
+                                <div class="cmd-icon">#{{ loop.index }}</div>
+                                <div>
+                                    <div class="cmd-name">{{ c }}</div>
+                                    <div class="cmd-sub">Cisco IOS CLI</div>
+                                </div>
+                            </div>
+                            <span class="pill-tag">CLI &rsaquo;</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="right-panel">
+                <!-- Telemetry Summary Bar with Lime Progress Ring -->
+                <div class="telemetry-strip">
+                    <div>
+                        <div class="telemetry-title">Target Lab Node</div>
+                        <div class="telemetry-value">{{ dev.ip }} : {{ dev.port }}</div>
+                    </div>
+
+                    <div class="ring-group">
+                        <div style="text-align: right;">
+                            <div class="telemetry-title">Execution</div>
+                            <div style="font-weight: 700; font-size: 0.95rem;">
+                                {% if results is defined and results %}
+                                    {{ results|length }} of {{ cmd_list|length }} Done
+                                {% else %}
+                                    0 of {{ cmd_list|length }} Done
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="lime-ring">
+                            {% if results is defined and results %}
+                                {{ results|length }}/{{ cmd_list|length }}
+                            {% else %}
+                                0/{{ cmd_list|length }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="filter-row">
+                    <div class="filter-tabs">
+                        <span class="active">All Output<sup>{{ results|length if results is defined and results else 0 }}</sup></span>
+                        <span>Queued<sup>{{ cmd_list|length }}</sup></span>
+                    </div>
+
+                    {% if results is defined and results %}
+                    <div class="action-links">
+                        <button type="button" class="ghost-btn" onclick="toggleCards(true)">Expand All</button>
+                        <button type="button" class="ghost-btn" onclick="toggleCards(false)">Collapse All</button>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Error Banner -->
+                {% if error is defined and error %}
+                    <div class="error-card" role="alert">
+                        <strong>Could not connect to router</strong>
+                        <small>{{ error }}</small>
+                        <small>Check that the EVE-NG node is running and {{ dev.ip }}:{{ dev.port }} is reachable.</small>
+                    </div>
+                {% endif %}
+
+                <!-- Results List -->
+                {% if results is defined and results %}
+                    {% for cmd, output in results.items() %}
+                        <details class="result-card" open>
+                            <summary>
+                                <div class="res-left">
+                                    <div class="res-icon">&gt;_</div>
+                                    <div>
+                                        <div class="res-title">{{ cmd }}</div>
+                                        <div class="res-sub">Cisco IOS Output</div>
+                                    </div>
+                                </div>
+                                <div class="res-right">
+                                    <span class="done-badge">&#10003; 100%</span>
+                                    <button type="button" class="copy-pill" onclick="copyOutput(event, this)">Copy &rsaquo;</button>
+                                </div>
+                            </summary>
+                            <pre>{{ output }}</pre>
+                        </details>
+                    {% endfor %}
+                {% elif not (error is defined and error) %}
+                    <div class="empty-state">
+                        <h3>No Output Captured Yet</h3>
+                        <p>Click <strong>Run Diagnostics &rsaquo;</strong> on the mauve card to pull live output from your router.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("run-form").addEventListener("submit", function () {
+            const btn = document.getElementById("run-btn");
+            const txt = document.getElementById("btn-text");
+            btn.disabled = true;
+            txt.textContent = "Running commands...";
+        });
+
+        function copyOutput(e, btn) {
+            e.preventDefault();
+            const text = btn.closest("details").querySelector("pre").textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const orig = btn.innerHTML;
+                btn.textContent = "Copied!";
+                setTimeout(() => btn.innerHTML = orig, 1500);
+            });
+        }
+
+        function toggleCards(state) {
+            document.querySelectorAll("details.result-card").forEach(d => d.open = state);
+        }
+    </script>
+</body>
+</html>

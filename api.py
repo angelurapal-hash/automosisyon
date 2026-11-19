@@ -1,26 +1,29 @@
+from netmiko import ConnectHandler
 from flask import Flask, render_template, request
 app = Flask(__name__)
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    results = {}
+    error = None
+    
     if request.method == "POST":
-       router_device = {
-          'device_type': 'cisco_ios_telnet',
-          'ip': '192.168.10.116',
-          'port': 32770,
-          'username': 'admin',
-          'password': 'eve123',
-          'secret': 'eve123',
+        router_device = {
+            'device_type': 'cisco_ios_telnet',
+            'ip': '192.168.10.47',
+            'port': 32770,
+            'username': 'admin',
+            'password': 'eve123',
+            'secret': 'eve123',
         }
 
         commands_to_run = [
-          "show version",
-          "show ip interface brief",
-          "show running-config"
+            "show version",
+            "show ip interface brief",
+            "show running-config"
         ]
 
         try:
-          
             net_connect = ConnectHandler(**router_device)
             net_connect.enable()
 
@@ -31,7 +34,7 @@ def index():
             net_connect.disconnect()
 
         except Exception as e:
-          error = f"Connection failed: {e}"
+            error = f"Connection failed: {e}"
 
     return render_template("index.html", results=results, error=error)
 
